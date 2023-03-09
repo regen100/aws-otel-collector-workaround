@@ -29,15 +29,16 @@ jobs:
           min_tag=0.26.0
           docker buildx create --use --driver=docker-container
           pip3 install semver
-          readonly tags=($(curl -sSL https://api.github.com/repos/aws-observability/aws-otel-collector/releases | jq -r ".[].tag_name" | grep '^v' | tac))
-          for tag in ${tags[@]}; do
+          readonly latest="$(curl -sSL https://api.github.com/repos/aws-observability/aws-otel-collector/releases/latest | jq -r ".tag_name")"
+          readonly tags="$(curl -sSL https://api.github.com/repos/aws-observability/aws-otel-collector/releases | jq -r ".[].tag_name" | grep '^v' | tac)"
+          for tag in ${tags}; do
             if python -c "import semver; exit(semver.compare('${tag/v/}', '${min_tag}') >= 0)"; then
               continue
             fi
 
             echo "::group::${tag}"
             args=(--tag ghcr.io/${{ github.repository }}:${tag})
-            if [[ ${tag} == ${tags[-1]} ]]; then
+            if [[ ${tag} == ${latest} ]]; then
               args+=(--tag ghcr.io/${{ github.repository }}:latest)
             fi
             docker buildx build . \
